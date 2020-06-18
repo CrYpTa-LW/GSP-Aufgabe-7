@@ -32,25 +32,42 @@
 //--- For Timer -----------------------------
 #include "timer.h"
 
-int input;
+
 int countR = 0;
 int countL = 0;
-int lastState = 3;
 int currentState = 0;
-int taste5;
-int taste5alt;
 
 int main(void)
 {
   Init_TI_Board();
+	timerinit();
+	
+	TIM2->ARR = 0xDAC0;   //84000000
+	TIM2->PSC = 300;
+	TIM2->SR &= ~0x1;
+	
+	int input;
+	int leds;
+	
+	int lastState = 3;
+	int taste5;
+	int taste5alt;
+	
+	TFTausgabe();
 	
 	while(1)
 	{
 		input = GPIOE->IDR;
 		currentState = input & 0x03;
-		GPIOG->BSRRH = 0xF;
-		GPIOG->BSRRL = currentState;	
 		taste5 = input & 0x20;
+		
+		leds = GPIOG->IDR & 0xFFF0;
+		leds = leds | currentState;
+		//GPIOG->BSRRH = 0xF;
+		//GPIOG->BSRRL = currentState;	
+		GPIOG->ODR = leds;
+		
+		
 		
 		if(taste5 != taste5alt)
 		{
@@ -114,16 +131,35 @@ int main(void)
 					break;
 			}
 		}
+		
+		if((TIM2->SR & 0x01) == 1)
+		{
+			TIM2->SR &= ~0x01;
+			TFTausgabe();
+		}
+		
 		lastState = currentState;
 	}
 }
 
 void printCount()
 {
-	GPIOG->ODR = GPIOG->IDR & 0x000F;
-	GPIOG->BSRRL = (countL << 4) + currentState;
-	GPIOG->BSRRL = (countR << 12) + currentState;
+	int leds = GPIOG->IDR & 0x000F;
+	leds = leds + (countL << 4);
+	leds = leds + (countR << 12);
+	GPIOG->ODR = leds;
+	//GPIOG->BSRRL = (countL << 4) + currentState;
+	//GPIOG->BSRRL = (countR << 12) + currentState;
 }
 
+void TFTausgabe()
+{
+	TFT_cls();
+	char ostr[100];
+	
+	sprintf(ostr, "Links Rotationen: %d \n\rRechts Rotationen: %d", countL, countR);
+	
+	TFT_puts(ostr);
+}
 
 // EOF
