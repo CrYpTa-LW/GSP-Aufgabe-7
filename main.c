@@ -32,9 +32,10 @@
 //--- For Timer -----------------------------
 #include "timer.h"
 
-
+//Counter für Drehungen 
 int countR = 0;
 int countL = 0;
+//Drehgeber Status
 int currentState = 0;
 
 int main(void)
@@ -42,6 +43,7 @@ int main(void)
   Init_TI_Board();
 	timerinit();
 	
+	//Timer auf 200 Milisekunden setzen 
 	TIM2->ARR = 0xDAC0;   //84000000
 	TIM2->PSC = 300;
 	TIM2->SR &= ~0x1;
@@ -57,10 +59,14 @@ int main(void)
 	
 	while(1)
 	{
+		//Lese input 
 		input = GPIOE->IDR;
+		//Kopiere Status des Drehgebers in current state -> ersten beiden Bits
 		currentState = input & 0x03;
+		//Kopiere Status taste 5
 		taste5 = input & 0x20;
 		
+		//Gebe den Status des Drehgebers Binär codiert an den Leds aus
 		leds = GPIOG->IDR & 0xFFF0;
 		leds = leds | currentState;
 		//GPIOG->BSRRH = 0xF;
@@ -68,7 +74,7 @@ int main(void)
 		GPIOG->ODR = leds;
 		
 		
-		
+		//Taste 5 gedrückt -> reset counter und Leds am TFT
 		if(taste5 != taste5alt)
 		{
 			countL = 0;
@@ -77,6 +83,7 @@ int main(void)
 			taste5alt = taste5;
 		}
 		
+		//Überprüfe wie sich der Status des Drehgebers geändert hat 
 		if(currentState != lastState)
 		{
 			switch(currentState)
@@ -132,6 +139,7 @@ int main(void)
 			}
 		}
 		
+		//Nach ablauf Timer -> counter am TFT ausgeben
 		if((TIM2->SR & 0x01) == 1)
 		{
 			TIM2->SR &= ~0x01;
@@ -142,6 +150,7 @@ int main(void)
 	}
 }
 
+//Gibt die counter binär codiert an den Leds aus
 void printCount()
 {
 	int leds = GPIOG->IDR & 0x000F;
@@ -152,6 +161,7 @@ void printCount()
 	//GPIOG->BSRRL = (countR << 12) + currentState;
 }
 
+//TFT ausgabe der counter
 void TFTausgabe()
 {
 	TFT_cls();
